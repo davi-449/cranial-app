@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<coverage generated="1744031313470" clover="3.2.0">
+  <project timestamp="1744031313471" name="All files">
+    <metrics statements="13" coveredstatements="0" conditionals="6" coveredconditionals="0" methods="4" coveredmethods="0" elements="23" coveredelements="0" complexity="0" loc="13" ncloc="13" packages="1" files="1" classes="1"/>
+    <file name="api.ts" path="C:\Users\Davi\Desktop\projetos\cranial-app\cranial-app\mobile\src\services\api.ts">
+      <metrics statements="13" coveredstatements="0" conditionals="6" coveredconditionals="0" methods="4" coveredmethods="0"/>
+      <line num="4" count="0" type="stmt"/>
+      <line num="12" count="0" type="stmt"/>
+      <line num="14" count="0" type="stmt"/>
+      <line num="16" count="0" type="cond" truecount="0" falsecount="2"/>
+      <line num="17" count="0" type="stmt"/>
+      <line num="20" count="0" type="stmt"/>
+      <line num="23" count="0" type="stmt"/>
+      <line num="28" count="0" type="stmt"/>
+      <line num="30" count="0" type="stmt"/>
+      <line num="34" count="0" type="cond" truecount="0" falsecount="4"/>
+      <line num="36" count="0" type="stmt"/>
+      <line num="37" count="0" type="stmt"/>
+      <line num="42" count="0" type="stmt"/>
+    </file>
+  </project>
+</coverage>

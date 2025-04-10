@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # Serviço do banco de dados PostgreSQL
+  postgres:
+    image: postgres:13-alpine
+    container_name: cranial-app-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-cranial_app}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - cranial-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Serviço da API backend
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    container_name: cranial-app-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_NAME: ${DB_NAME:-cranial_app}
+      JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_key}
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./api:/app/api
+      - ./shared:/app/shared
+      - node_modules_api:/app/api/node_modules
+    networks:
+      - cranial-network
+    command: npm run dev
+
+  # Serviço de desenvolvimento para o frontend
+  mobile-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: cranial-app-mobile-dev
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      EXPO_DEVTOOLS_LISTEN_ADDRESS: 0.0.0.0
+      REACT_NATIVE_PACKAGER_HOSTNAME: ${REACT_NATIVE_PACKAGER_HOSTNAME:-localhost}
+    ports:
+      - "19000:19000"
+      - "19001:19001"
+      - "19002:19002"
+    volumes:
+      - ./mobile:/app/mobile
+      - ./shared:/app/shared
+      - node_modules_mobile:/app/mobile/node_modules
+    networks:
+      - cranial-network
+    command: sh -c "cd mobile && npm run start"
+
+networks:
+  cranial-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  node_modules_api:
+  node_modules_mobile:
