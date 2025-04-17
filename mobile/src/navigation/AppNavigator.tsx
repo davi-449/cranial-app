@@ -170,6 +170,7 @@ const ProfileStack = () => {
 };
 
 // Navegador principal que decide entre autenticação e aplicação
+// Corrigido para incluir as stacks de navegação como telas registradas
 const AppNavigator = () => {
   const { signed, loading } = useAuth();
 
@@ -180,7 +181,14 @@ const AppNavigator = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {signed ? (
-        <Stack.Screen name="App" component={AppTabs} />
+        <>
+          <Stack.Screen name="App" component={AppTabs} />
+          {/* Registrar as stacks de navegação no navegador principal para permitir navegação hierárquica */}
+          <Stack.Screen name="PatientStack" component={PatientsStack} />
+          <Stack.Screen name="MeasurementStack" component={MeasurementsStack} />
+          <Stack.Screen name="ReportStack" component={ReportsStack} />
+          <Stack.Screen name="ProfileStack" component={ProfileStack} />
+        </>
       ) : (
         <Stack.Screen name="Login" component={LoginScreen} />
       )}

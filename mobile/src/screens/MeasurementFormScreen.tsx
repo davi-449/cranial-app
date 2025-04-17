@@ -7,13 +7,15 @@ import {
   TouchableOpacity, 
   Alert,
   ActivityIndicator,
-  ToastAndroid 
+  ToastAndroid,
+  Platform
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useApi } from '../contexts/ApiContext';
 import NumericInput from '../components/NumericInput';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RootStackParamList } from '../navigation/types';
+import { sanitizeInput } from '../utils/security';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'MeasurementForm'>;
 
@@ -21,11 +23,22 @@ interface RouteParams {
   patientId?: string;
 }
 
+interface FormData {
+  width: string;
+  length: string;
+  diagonalA: string;
+  diagonalB: string;
+}
+
 const MeasurementFormScreen: React.FC = () => {
-  const [width, setWidth] = useState('');
-  const [length, setLength] = useState('');
-  const [diagonalA, setDiagonalA] = useState('');
-  const [diagonalB, setDiagonalB] = useState('');
+  // Estado local para o formulário - corrigido para usar useState em vez de variável global
+  const [formData, setFormData] = useState<FormData>({
+    width: '',
+    length: '',
+    diagonalA: '',
+    diagonalB: ''
+  });
+  
   const [patientName, setPatientName] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -61,37 +74,48 @@ const MeasurementFormScreen: React.FC = () => {
     }
   };
 
+  // Função segura para atualizar o estado do formulário
+  const handleInputChange = (field: keyof FormData, value: string) => {
+    // Sanitizar input antes de atualizar o estado
+    const sanitizedValue = sanitizeInput(value);
+    
+    setFormData(prevData => ({
+      ...prevData,
+      [field]: sanitizedValue
+    }));
+  };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     
-    if (!width) {
+    if (!formData.width) {
       newErrors.width = 'Largura é obrigatória';
-    } else if (parseFloat(width) <= 0) {
+    } else if (parseFloat(formData.width) <= 0) {
       newErrors.width = 'Valor deve ser maior que zero';
     }
     
-    if (!length) {
+    if (!formData.length) {
       newErrors.length = 'Comprimento é obrigatório';
-    } else if (parseFloat(length) <= 0) {
+    } else if (parseFloat(formData.length) <= 0) {
       newErrors.length = 'Valor deve ser maior que zero';
     }
     
-    if (!diagonalA) {
+    if (!formData.diagonalA) {
       newErrors.diagonalA = 'Diagonal A é obrigatória';
-    } else if (parseFloat(diagonalA) <= 0) {
+    } else if (parseFloat(formData.diagonalA) <= 0) {
       newErrors.diagonalA = 'Valor deve ser maior que zero';
     }
     
-    if (!diagonalB) {
+    if (!formData.diagonalB) {
       newErrors.diagonalB = 'Diagonal B é obrigatória';
-    } else if (parseFloat(diagonalB) <= 0) {
+    } else if (parseFloat(formData.diagonalB) <= 0) {
       newErrors.diagonalB = 'Valor deve ser maior que zero';
     }
     
     // Validar diferença entre diagonais
-    if (diagonalA && diagonalB) {
-      const diagA = parseFloat(diagonalA);
-      const diagB = parseFloat(diagonalB);
+    if (formData.diagonalA && formData.diagonalB) {
+      const diagA = parseFloat(formData.diagonalA);
+      const diagB = parseFloat(formData.diagonalB);
       
       if (Math.abs(diagA - diagB) > 20) {
         newErrors.diagonalDiff = 'Diferença entre diagonais não pode ser maior que 20mm';
@@ -114,20 +138,22 @@ const MeasurementFormScreen: React.FC = () => {
 
     try {
       const measurementData = {
-        width: parseFloat(width),
-        length: parseFloat(length),
-        diagonalA: parseFloat(diagonalA),
-        diagonalB: parseFloat(diagonalB),
+        width: parseFloat(formData.width),
+        length: parseFloat(formData.length),
+        diagonalA: parseFloat(formData.diagonalA),
+        diagonalB: parseFloat(formData.diagonalB),
         date: new Date().toISOString().split('T')[0],
       };
 
       const result = await addMeasurement(Number(patientId), measurementData);
 
       // Limpa os campos após o sucesso
-      setWidth('');
-      setLength('');
-      setDiagonalA('');
-      setDiagonalB('');
+      setFormData({
+        width: '',
+        length: '',
+        diagonalA: '',
+        diagonalB: ''
+      });
       
       // Mostrar feedback de sucesso
       setSuccessMessage('Medição registrada com sucesso!');
@@ -196,8 +222,8 @@ const MeasurementFormScreen: React.FC = () => {
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Largura (mm)</Text>
               <NumericInput
-                value={width}
-                onChangeText={setWidth}
+                value={formData.width}
+                onChangeText={(value) => handleInputChange('width', value)}
                 placeholder="0"
                 error={!!errors.width}
                 suffix="mm"
@@ -208,8 +234,8 @@ const MeasurementFormScreen: React.FC = () => {
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Comprimento (mm)</Text>
               <NumericInput
-                value={length}
-                onChangeText={setLength}
+                value={formData.length}
+                onChangeText={(value) => handleInputChange('length', value)}
                 placeholder="0"
                 error={!!errors.length}
                 suffix="mm"
@@ -222,8 +248,8 @@ const MeasurementFormScreen: React.FC = () => {
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Diagonal A (mm)</Text>
               <NumericInput
-                value={diagonalA}
-                onChangeText={setDiagonalA}
+                value={formData.diagonalA}
+                onChangeText={(value) => handleInputChange('diagonalA', value)}
                 placeholder="0"
                 error={!!errors.diagonalA}
                 suffix="mm"
@@ -234,8 +260,8 @@ const MeasurementFormScreen: React.FC = () => {
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Diagonal B (mm)</Text>
               <NumericInput
-                value={diagonalB}
-                onChangeText={setDiagonalB}
+                value={formData.diagonalB}
+                onChangeText={(value) => handleInputChange('diagonalB', value)}
                 placeholder="0"
                 error={!!errors.diagonalB}
                 suffix="mm"

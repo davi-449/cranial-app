@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { memo } from 'react';
 import { 
   View, 
   Text, 
@@ -21,11 +21,53 @@ interface Patient {
   gender?: string;
 }
 
+// Componente de item de paciente memoizado para evitar renderizações desnecessárias
+const PatientItem = memo(({ 
+  item, 
+  onSelect, 
+  onDelete 
+}: { 
+  item: Patient; 
+  onSelect: (patient: Patient) => void; 
+  onDelete: (patient: Patient) => void;
+}) => {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR');
+  };
+
+  return (
+    <View style={styles.patientCard}>
+      <TouchableOpacity 
+        style={styles.patientInfoContainer}
+        onPress={() => onSelect(item)}
+      >
+        <View style={styles.patientInfo}>
+          <Text style={styles.patientName}>{item.name}</Text>
+          <Text style={styles.patientDetails}>Nascimento: {formatDate(item.birthDate)}</Text>
+          {item.gender && (
+            <Text style={styles.patientDetails}>
+              Gênero: {item.gender === 'male' ? 'Masculino' : item.gender === 'female' ? 'Feminino' : 'Outro'}
+            </Text>
+          )}
+        </View>
+        <Ionicons name="chevron-forward" size={24} color="#BDBDBD" />
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={styles.deleteButton}
+        onPress={() => onDelete(item)}
+      >
+        <Ionicons name="trash-outline" size={24} color="#FF5252" />
+      </TouchableOpacity>
+    </View>
+  );
+});
+
 const PatientListScreen: React.FC = () => {
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [searchText, setSearchText] = useState('');
-  const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
+  const [patients, setPatients] = React.useState<Patient[]>([]);
+  const [searchText, setSearchText] = React.useState('');
+  const [filteredPatients, setFilteredPatients] = React.useState<Patient[]>([]);
+  const [refreshing, setRefreshing] = React.useState(false);
   const { getPatients, deletePatient, loading, error, refreshData } = useApi();
   const { signOut } = useAuth();
   const navigation = useNavigation();
@@ -37,7 +79,7 @@ const PatientListScreen: React.FC = () => {
     }, [])
   );
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (searchText.trim() === '') {
       setFilteredPatients(patients);
     } else {
@@ -110,36 +152,36 @@ const PatientListScreen: React.FC = () => {
     );
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR');
-  };
+  // Otimização para cálculo de layout de itens
+  const getItemLayout = (data: Patient[] | null, index: number) => ({
+    length: 100, // altura estimada de cada item
+    offset: 100 * index,
+    index,
+  });
 
-  const renderPatientItem = ({ item }: { item: Patient }) => (
-    <View style={styles.patientCard}>
-      <TouchableOpacity 
-        style={styles.patientInfoContainer}
-        onPress={() => handleSelectPatient(item)}
-      >
-        <View style={styles.patientInfo}>
-          <Text style={styles.patientName}>{item.name}</Text>
-          <Text style={styles.patientDetails}>Nascimento: {formatDate(item.birthDate)}</Text>
-          {item.gender && (
-            <Text style={styles.patientDetails}>
-              Gênero: {item.gender === 'male' ? 'Masculino' : item.gender === 'female' ? 'Feminino' : 'Outro'}
-            </Text>
-          )}
-        </View>
-        <Ionicons name="chevron-forward" size={24} color="#BDBDBD" />
-      </TouchableOpacity>
-      <TouchableOpacity 
-        style={styles.deleteButton}
-        onPress={() => handleDeletePatient(item)}
-      >
-        <Ionicons name="trash-outline" size={24} color="#FF5252" />
-      </TouchableOpacity>
-    </View>
-  );
+  // Otimização para extração de chaves
+  const keyExtractor = (item: Patient) => item.id.toString();
+
+  // Componente vazio memoizado
+  const EmptyComponent = React.useMemo(() => {
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>
+          {searchText.length > 0 
+            ? 'Nenhum paciente encontrado com esse nome' 
+            : 'Nenhum paciente cadastrado'}
+        </Text>
+        {searchText.length === 0 && (
+          <TouchableOpacity 
+            style={styles.emptyButton}
+            onPress={handleAddPatient}
+          >
+            <Text style={styles.emptyButtonText}>Adicionar paciente</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  }, [searchText]);
 
   return (
     <View style={styles.container}>
@@ -184,29 +226,24 @@ const PatientListScreen: React.FC = () => {
         <FlatList
           style={{ width: '100%', backgroundColor: 'rgb(245,245,245)' }}
           data={filteredPatients}
-          extraData={filteredPatients} // Força a atualização da lista
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={renderPatientItem}
+          extraData={filteredPatients.length} // Otimizado: apenas re-renderiza quando o tamanho da lista muda
+          keyExtractor={keyExtractor}
+          renderItem={({ item }) => (
+            <PatientItem 
+              item={item} 
+              onSelect={handleSelectPatient} 
+              onDelete={handleDeletePatient}
+            />
+          )}
+          getItemLayout={getItemLayout}
           contentContainerStyle={styles.listContent}
           refreshing={refreshing}
           onRefresh={handleRefresh}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
-                {searchText.length > 0 
-                  ? 'Nenhum paciente encontrado com esse nome' 
-                  : 'Nenhum paciente cadastrado'}
-              </Text>
-              {searchText.length === 0 && (
-                <TouchableOpacity 
-                  style={styles.emptyButton}
-                  onPress={handleAddPatient}
-                >
-                  <Text style={styles.emptyButtonText}>Adicionar paciente</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          }
+          ListEmptyComponent={EmptyComponent}
+          windowSize={5} // Otimização: reduz a janela de renderização
+          maxToRenderPerBatch={10} // Otimização: limita o número de itens renderizados por lote
+          updateCellsBatchingPeriod={50} // Otimização: aumenta o período de atualização em lote
+          removeClippedSubviews={true} // Otimização: remove views que estão fora da tela
         />
       )}
     </View>
