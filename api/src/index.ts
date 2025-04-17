@@ -14,7 +14,7 @@ dotenv.config();
 
 // Inicializa o Express
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT || 3000);
 
 // Middlewares
 app.use(cors({
@@ -22,7 +22,9 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false // Desabilita para permitir o Swagger UI funcionar corretamente
+}));
 app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -47,14 +49,19 @@ const swaggerOptions = {
 };
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
 
-// Rotas
+// Rota de teste para verificar se a API está funcionando
+app.get('/', (req, res) => {
+  res.json({ message: 'API de Medições Cranianas está funcionando!' });
+});
+
+// Rotas da API
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 app.use('/api/auth', authRoutes);
 app.use('/api', routes);
 
-// Rota de teste para verificar se a API está funcionando
-app.get('/', (req, res) => {
-  res.json({ message: 'API de Medições Cranianas está funcionando!' });
+// Rota para verificar se o endpoint /api está funcionando
+app.get('/api', (req, res) => {
+  res.json({ message: 'Endpoint /api está funcionando!' });
 });
 
 // Sincroniza o banco de dados e inicia o servidor
@@ -65,6 +72,8 @@ sequelize.sync()
     // Inicia o servidor apenas após a sincronização do banco de dados
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`Servidor rodando na porta ${PORT}`);
+      console.log(`Acesse a documentação da API em http://localhost:${PORT}/api-docs`);
+      console.log(`Acesse a API em http://localhost:${PORT}/api`);
     });
   })
   .catch(error => {
