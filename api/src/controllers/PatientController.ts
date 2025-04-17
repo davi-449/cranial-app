@@ -90,12 +90,24 @@ class PatientController {
   public async delete(req: Request, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
-      const patient = await Patient.findByPk(id);
+      
+      // Verificar se o paciente existe
+      const patient = await Patient.findByPk(id, {
+        include: [{ model: Measurement, as: 'measurements' }]
+      });
 
       if (!patient) {
         return res.status(404).json({ message: 'Paciente não encontrado' });
       }
 
+      // Primeiro excluir todas as medições relacionadas ao paciente
+      // para evitar erro de restrição de chave estrangeira
+      const measurements = patient.get('measurements') as Measurement[];
+      if (measurements && Array.isArray(measurements) && measurements.length > 0) {
+        await Promise.all(measurements.map(measurement => measurement.destroy()));
+      }
+
+      // Depois excluir o paciente
       await patient.destroy();
 
       return res.status(200).json({ message: 'Paciente removido com sucesso' });
